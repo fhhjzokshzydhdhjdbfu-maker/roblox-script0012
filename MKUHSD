@@ -1,0 +1,83 @@
+-- PLAYER VISION LINE ESP (FIXED)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+-- ===== UI (เหมือนเดิม ตัดออกเพื่อย่อ) =====
+-- ใช้ UI เดิมของคุณได้เลย ไม่ต้องแก้
+
+-- ===== ESP LINE LOGIC =====
+local ESP_ON = false
+local lineSize = 2
+local colors = {
+	Color3.new(1,1,1),
+	Color3.fromRGB(255,0,0),
+	Color3.fromRGB(0,255,0),
+	Color3.fromRGB(0,170,255)
+}
+local colorIndex = 1
+local lines = {}
+
+local function removeLine(player)
+	if lines[player] then
+		lines[player]:Remove()
+		lines[player] = nil
+	end
+end
+
+local function getLine(player)
+	if not lines[player] then
+		local l = Drawing.new("Line")
+		l.Visible = false
+		l.Thickness = lineSize
+		l.Color = colors[colorIndex]
+		l.Transparency = 1
+		lines[player] = l
+	end
+	return lines[player]
+end
+
+-- ลบเส้นเมื่อผู้เล่นออก
+Players.PlayerRemoving:Connect(removeLine)
+
+-- ลบเส้นเมื่อตัวละครหาย
+Players.PlayerAdded:Connect(function(p)
+	p.CharacterRemoving:Connect(function()
+		removeLine(p)
+	end)
+end)
+
+-- ===== LOOP =====
+RunService.RenderStepped:Connect(function()
+	for _,p in ipairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer then
+			local char = p.Character
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
+			local head = char and char:FindFirstChild("Head")
+			local root = char and char:FindFirstChild("HumanoidRootPart")
+			local line = lines[p]
+
+			-- ❌ ตาย / ไม่มีตัวละคร = ลบเส้น
+			if not ESP_ON or not char or not hum or hum.Health <= 0 or not head or not root then
+				if line then line.Visible = false end
+				continue
+			end
+
+			local hPos, hOn = Camera:WorldToViewportPoint(head.Position)
+			local rPos, rOn = Camera:WorldToViewportPoint(root.Position)
+
+			if hOn and rOn then
+				line = getLine(p)
+				line.Visible = true
+				line.From = Vector2.new(hPos.X, hPos.Y)
+				line.To = Vector2.new(rPos.X, rPos.Y)
+				line.Thickness = lineSize
+				line.Color = colors[colorIndex]
+			else
+				if line then line.Visible = false end
+			end
+		end
+	end
+end)
