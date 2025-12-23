@@ -1,0 +1,81 @@
+-- TRUE ROBLOX SHIFT LOCK (ROTATE CHARACTER WITH CAMERA)
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- ===== GUI BUTTON =====
+local gui = Instance.new("ScreenGui")
+gui.Name = "ShiftLockGui"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local button = Instance.new("ImageButton")
+button.Size = UDim2.fromOffset(48,48)
+button.Position = UDim2.new(1,-60,0,20) -- มุมขวาบน
+button.BackgroundTransparency = 1
+button.Image = "rbxassetid://6031280882" -- ไอคอน Shift Lock
+button.Parent = gui
+button.Active = true
+button.Draggable = true
+
+-- ===== SHIFT LOCK LOGIC =====
+local shiftLock = false
+local rotationConnection
+
+local function enableShiftLock()
+	local char = player.Character
+	if not char then return end
+
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not root then return end
+
+	UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+	humanoid.AutoRotate = false
+
+	rotationConnection = RunService.RenderStepped:Connect(function()
+		local camCF = camera.CFrame
+		local lookVector = Vector3.new(camCF.LookVector.X, 0, camCF.LookVector.Z)
+
+		if lookVector.Magnitude > 0 then
+			root.CFrame = CFrame.new(root.Position, root.Position + lookVector)
+		end
+	end)
+end
+
+local function disableShiftLock()
+	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+
+	local char = player.Character
+	if char then
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.AutoRotate = true
+		end
+	end
+
+	if rotationConnection then
+		rotationConnection:Disconnect()
+		rotationConnection = nil
+	end
+end
+
+button.MouseButton1Click:Connect(function()
+	shiftLock = not shiftLock
+	if shiftLock then
+		enableShiftLock()
+	else
+		disableShiftLock()
+	end
+end)
+
+-- รีเซ็ตเมื่อเกิดใหม่
+player.CharacterAdded:Connect(function()
+	task.wait(0.2)
+	shiftLock = false
+	disableShiftLock()
+end)
