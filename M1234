@@ -1,0 +1,104 @@
+-- PLAYER LINE ESP (RUN & WORKING)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local ESP_ON = true
+local Lines = {}
+
+-- ===== LINE FUNCTIONS =====
+local function destroyLine(player)
+	if Lines[player] then
+		Lines[player]:Remove()
+		Lines[player] = nil
+	end
+end
+
+local function ensureLine(player)
+	if Lines[player] then return Lines[player] end
+	local line = Drawing.new("Line")
+	line.Visible = false
+	line.Color = Color3.new(1,1,1)
+	line.Thickness = 2
+	line.Transparency = 1
+	Lines[player] = line
+	return line
+end
+
+-- ===== CHARACTER HANDLING =====
+local function onCharacter(player, char)
+	destroyLine(player)
+
+	local hum = char:WaitForChild("Humanoid", 5)
+	if not hum then return end
+
+	-- ตาย = ลบเส้น
+	hum.Died:Connect(function()
+		destroyLine(player)
+	end)
+end
+
+-- ===== PLAYER SETUP =====
+local function setupPlayer(player)
+	if player == LocalPlayer then return end
+
+	if player.Character then
+		onCharacter(player, player.Character)
+	end
+
+	player.CharacterAdded:Connect(function(char)
+		onCharacter(player, char)
+	end)
+
+	player.CharacterRemoving:Connect(function()
+		destroyLine(player)
+	end)
+end
+
+-- ผู้เล่นที่มีอยู่
+for _,p in ipairs(Players:GetPlayers()) do
+	setupPlayer(p)
+end
+
+-- ผู้เล่นเข้า
+Players.PlayerAdded:Connect(setupPlayer)
+
+-- ผู้เล่นออก
+Players.PlayerRemoving:Connect(function(player)
+	destroyLine(player)
+end)
+
+-- ===== RENDER LOOP =====
+RunService.RenderStepped:Connect(function()
+	if not ESP_ON then
+		for _,l in pairs(Lines) do
+			l.Visible = false
+		end
+		return
+	end
+
+	for player,line in pairs(Lines) do
+		local char = player.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		local head = char and char:FindFirstChild("Head")
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+
+		if not char or not hum or hum.Health <= 0 or not head or not root then
+			line.Visible = false
+			continue
+		end
+
+		local hPos,hOn = Camera:WorldToViewportPoint(head.Position)
+		local rPos,rOn = Camera:WorldToViewportPoint(root.Position)
+
+		if hOn and rOn then
+			line.Visible = true
+			line.From = Vector2.new(hPos.X, hPos.Y)
+			line.To = Vector2.new(rPos.X, rPos.Y)
+		else
+			line.Visible = false
+		end
+	end
+end)
