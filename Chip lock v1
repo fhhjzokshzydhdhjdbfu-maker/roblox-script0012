@@ -1,0 +1,56 @@
+-- SIMPLE SHIFT LOCK BUTTON (MOBILE)
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ===== GUI =====
+local gui = Instance.new("ScreenGui")
+gui.Name = "ShiftLockGui"
+gui.ResetOnSpawn = false
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.fromOffset(48,48)
+btn.Position = UDim2.new(1,-60,0,20) -- มุมขวาบน
+btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+btn.Text = "🔒"
+btn.TextScaled = true
+btn.TextColor3 = Color3.new(1,1,1)
+btn.Parent = gui
+btn.Active = true
+btn.Draggable = true
+
+Instance.new("UICorner", btn).CornerRadius = UDim.new(1,0)
+
+-- ===== SHIFT LOCK LOGIC =====
+local shiftLock = false
+
+local function updateShiftLock(state)
+	shiftLock = state
+
+	if LocalPlayer.Character then
+		local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.AutoRotate = not shiftLock
+		end
+	end
+
+	UserInputService.MouseBehavior = shiftLock
+		and Enum.MouseBehavior.LockCenter
+		or Enum.MouseBehavior.Default
+
+	btn.BackgroundColor3 = shiftLock
+		and Color3.fromRGB(0,170,255)
+		or Color3.fromRGB(30,30,30)
+end
+
+btn.MouseButton1Click:Connect(function()
+	updateShiftLock(not shiftLock)
+end)
+
+-- รีเซ็ตเมื่อเกิดใหม่
+LocalPlayer.CharacterAdded:Connect(function()
+	task.wait(0.2)
+	updateShiftLock(false)
+end)
