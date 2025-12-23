@@ -1,0 +1,57 @@
+-- ROBLOX STYLE SHIFT LOCK (MOBILE + PC)
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- ===== GUI =====
+local gui = Instance.new("ScreenGui")
+gui.Name = "ShiftLockButton"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local button = Instance.new("ImageButton")
+button.Size = UDim2.fromOffset(48,48)
+button.Position = UDim2.new(1,-60,0,20) -- มุมขวาบน
+button.BackgroundTransparency = 1
+button.Image = "rbxassetid://6031280882" -- ไอคอน Shift Lock สไตล์ Roblox
+button.Parent = gui
+button.Active = true
+button.Draggable = true
+
+-- ===== LOGIC =====
+local shiftLock = false
+local cameraOffset = Vector3.new(1.75, 0, 0)
+
+local function setShiftLock(state)
+	shiftLock = state
+
+	local char = player.Character
+	if not char then return end
+
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+
+	if shiftLock then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+		humanoid.AutoRotate = false
+		humanoid.CameraOffset = cameraOffset
+	else
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		humanoid.AutoRotate = true
+		humanoid.CameraOffset = Vector3.zero
+	end
+end
+
+button.MouseButton1Click:Connect(function()
+	setShiftLock(not shiftLock)
+end)
+
+-- รีเซ็ตเมื่อเกิดใหม่
+player.CharacterAdded:Connect(function()
+	task.wait(0.2)
+	setShiftLock(false)
+end)
