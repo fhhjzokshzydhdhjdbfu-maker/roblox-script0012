@@ -1,0 +1,152 @@
+-- PLAYER VISION LINE ESP (FINAL 1-100%)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+-- ===== UI =====
+local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.fromOffset(260,200)
+frame.Position = UDim2.new(0.5,-130,0.25,0)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,18)
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,40)
+title.BackgroundTransparency = 1
+title.Text = "PLAYER VISION UI"
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBold
+title.TextScaled = true
+
+local espBtn = Instance.new("TextButton", frame)
+espBtn.Size = UDim2.new(0.8,0,0,32)
+espBtn.Position = UDim2.new(0.1,0,0,50)
+espBtn.Text = "VISION : OFF"
+espBtn.TextScaled = true
+espBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+espBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", espBtn)
+
+local sizeBtn = Instance.new("TextButton", frame)
+sizeBtn.Size = UDim2.new(0.8,0,0,32)
+sizeBtn.Position = UDim2.new(0.1,0,0,90)
+sizeBtn.Text = "LINE SIZE : 10%"
+sizeBtn.TextScaled = true
+sizeBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+sizeBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", sizeBtn)
+
+-- ===== DATA =====
+local ESP_ON = false
+local linePercent = 10 -- 1 - 100 %
+local MIN_THICKNESS = 0.5
+local MAX_THICKNESS = 8
+
+local lines = {}
+
+local function percentToThickness(p)
+	return MIN_THICKNESS + (MAX_THICKNESS - MIN_THICKNESS) * (p / 100)
+end
+
+-- ===== LINE FUNCTIONS =====
+local function removeLine(player)
+	if lines[player] then
+		lines[player]:Remove()
+		lines[player] = nil
+	end
+end
+
+local function getLine(player)
+	if not lines[player] then
+		local l = Drawing.new("Line")
+		l.Visible = false
+		l.Color = Color3.new(1,1,1)
+		l.Transparency = 1
+		lines[player] = l
+	end
+	return lines[player]
+end
+
+-- ===== PLAYER EVENTS =====
+Players.PlayerRemoving:Connect(removeLine)
+
+local function onCharacter(player, char)
+	local hum = char:WaitForChild("Humanoid", 5)
+	if hum then
+		hum.Died:Connect(function()
+			removeLine(player)
+		end)
+	end
+end
+
+local function setupPlayer(player)
+	if player == LocalPlayer then return end
+
+	if player.Character then
+		onCharacter(player, player.Character)
+	end
+
+	player.CharacterAdded:Connect(function(char)
+		task.wait(0.2)
+		onCharacter(player, char)
+	end)
+end
+
+for _,p in ipairs(Players:GetPlayers()) do
+	setupPlayer(p)
+end
+
+Players.PlayerAdded:Connect(setupPlayer)
+
+-- ===== RENDER =====
+RunService.RenderStepped:Connect(function()
+	if not ESP_ON then
+		for _,l in pairs(lines) do
+			l.Visible = false
+		end
+		return
+	end
+
+	for _,player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer
+		and player.Character
+		and player.Character:FindFirstChild("Head")
+		and player.Character:FindFirstChild("HumanoidRootPart")
+		then
+			local line = getLine(player)
+
+			local hPos, hOn = Camera:WorldToViewportPoint(player.Character.Head.Position)
+			local rPos, rOn = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+
+			if hOn and rOn then
+				line.Visible = true
+				line.From = Vector2.new(hPos.X, hPos.Y)
+				line.To = Vector2.new(rPos.X, rPos.Y)
+				line.Thickness = percentToThickness(linePercent)
+			else
+				line.Visible = false
+			end
+		end
+	end
+end)
+
+-- ===== UI ACTIONS =====
+espBtn.MouseButton1Click:Connect(function()
+	ESP_ON = not ESP_ON
+	espBtn.Text = ESP_ON and "VISION : ON" or "VISION : OFF"
+end)
+
+sizeBtn.MouseButton1Click:Connect(function()
+	linePercent += 5
+	if linePercent > 100 then
+		linePercent = 1
+	end
+	sizeBtn.Text = "LINE SIZE : "..linePercent.."%"
+end)
